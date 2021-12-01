@@ -25,7 +25,7 @@ type rx struct {
 }
 
 func (o *rx) Init(data string) error {
-	re, err := pcre.Compile(data, 0)
+	re, err := pcre.Compile(data, pcre.DOTALL|pcre.DOLLAR_ENDONLY)
 	o.re = re
 	return err
 }
@@ -42,7 +42,7 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 }
 
 func init() {
-	operators.RegisterOperator("rx", func() coraza.RuleOperator { return new(rx) })
+	operators.RegisterPlugin("rx", func() coraza.RuleOperator { return new(rx) })
 }
 
 var _ coraza.RuleOperator = &rx{}

@@ -15,9 +15,9 @@
 package plugin
 
 import (
+	"github.com/corazawaf/coraza/v2"
+	"github.com/corazawaf/coraza/v2/operators"
 	pcre "github.com/gijsbers/go-pcre"
-	"github.com/jptosso/coraza-waf/v2"
-	"github.com/jptosso/coraza-waf/v2/operators"
 )
 
 type rx struct {

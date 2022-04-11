@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"github.com/corazawaf/coraza/v2/seclang"
 	"testing"
 
 	"github.com/corazawaf/coraza/v2"
@@ -19,6 +20,33 @@ func TestPlugin(t *testing.T) {
 	}
 	if !op.Evaluate(tx, "foo") {
 		t.Error("failed to match regex")
+	}
+}
+
+func TestRxMacro(t *testing.T) {
+	waf := coraza.NewWaf()
+	rules := `
+SecAction "id:100,setvar:'tx.macros=some'"
+`
+	parser, err := seclang.NewParser(waf)
+	if err != nil {
+		t.Error(err)
+	}
+	err = parser.FromString(rules)
+	if err != nil {
+		t.Error(err)
+	}
+	tx := waf.NewTransaction()
+
+	op, err := operators.GetOperator("rx")
+	if err != nil {
+		t.Error(err)
+	}
+	if err := op.Init("%{tx.macros}"); err != nil {
+		t.Error(err)
+	}
+	if op.Evaluate(tx, "somedata") {
+		t.Error("error test case for rx")
 	}
 }
 

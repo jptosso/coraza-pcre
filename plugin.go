@@ -17,20 +17,50 @@ package plugin
 import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/operators"
-	pcre "github.com/gijsbers/go-pcre"
+	"github.com/gijsbers/go-pcre"
+	"go.uber.org/zap"
+	"regexp"
+	"strings"
 )
 
 type rx struct {
-	re pcre.Regexp
+	data     string
+	compiled bool
+	macro    *coraza.Macro
+	re       pcre.Regexp
 }
 
 func (o *rx) Init(data string) error {
-	re, err := pcre.Compile(data, pcre.DOTALL|pcre.DOLLAR_ENDONLY)
-	o.re = re
+	var err error
+	re, err := regexp.Compile(`%{.*}`)
+	if err != nil {
+		return err
+	}
+	macros := re.FindAllString(data, -1)
+	if len(macros) > 0 {
+		o.macro, err = coraza.NewMacro(macros[0])
+		if err != nil {
+			return err
+		}
+	} else {
+		o.compiled = true
+		o.re, err = pcre.Compile(data, pcre.DOTALL|pcre.DOLLAR_ENDONLY)
+	}
+	o.data = data
 	return err
 }
 
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
+	if !o.compiled && o.macro != nil {
+		var err error
+		o.re, err = pcre.Compile(strings.Replace(o.data, o.macro.String(), o.macro.Expand(tx), -1), pcre.DOTALL|pcre.DOLLAR_ENDONLY)
+		if err != nil {
+			tx.Waf.Logger.Error("@rx operator compile macro data error", zap.Error(err))
+			return false
+		}
+		o.compiled = true
+	}
+
 	m := o.re.MatcherString(value, 0)
 	for i := 0; i < m.Groups()+1; i++ {
 		if i == 10 {

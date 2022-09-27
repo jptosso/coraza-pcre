@@ -15,12 +15,13 @@
 package plugin
 
 import (
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/operators"
-	"github.com/gijsbers/go-pcre"
-	"go.uber.org/zap"
 	"regexp"
 	"strings"
+
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/operators"
+	"github.com/gijsbers/go-pcre"
+	"go.uber.org/zap"
 )
 
 type rx struct {
@@ -30,7 +31,8 @@ type rx struct {
 	re       pcre.Regexp
 }
 
-func (o *rx) Init(data string) error {
+func (o *rx) Init(options coraza.RuleOperatorOptions) error {
+	data := options.Arguments
 	var err error
 	re, err := regexp.Compile(`%{.*}`)
 	if err != nil {
@@ -49,13 +51,12 @@ func (o *rx) Init(data string) error {
 	o.data = data
 	return err
 }
-
 func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 	if !o.compiled && o.macro != nil {
 		var err error
 		o.re, err = pcre.Compile(strings.Replace(o.data, o.macro.String(), o.macro.Expand(tx), -1), pcre.DOTALL|pcre.DOLLAR_ENDONLY)
 		if err != nil {
-			tx.Waf.Logger.Error("@rx operator compile macro data error", zap.Error(err))
+			tx.WAF.Logger.Error("@rx operator compile macro data error", zap.Error(err))
 			return false
 		}
 		o.compiled = true
@@ -72,7 +73,7 @@ func (o *rx) Evaluate(tx *coraza.Transaction, value string) bool {
 }
 
 func init() {
-	operators.RegisterPlugin("rx", func() coraza.RuleOperator { return new(rx) })
+	operators.Register("rx", func() coraza.RuleOperator { return &rx{} })
 }
 
 var _ coraza.RuleOperator = &rx{}
